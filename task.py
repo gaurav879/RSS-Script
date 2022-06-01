@@ -86,7 +86,7 @@ if __name__ == "__main__":
         # Add heading to file
         spamwriter.writerow(["Keyword"] + ["Article"] + ["Author"])
     media_keywords = parsed_data.entries[0].media_keywords.strip(" ").split(", ")
-    schedule.every(2).seconds.do(get_top_id)
+    schedule.every(10).minutes.do(get_top_id)
 
     while True:
         schedule.run_pending()
