@@ -1,16 +1,16 @@
 """
 Module for notifing updates in the RSS feed
 """
+import csv
 import logging
 from datetime import datetime
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 import feedparser
 import schedule
 
 logging.basicConfig(
-    filename="logs.log",
-    encoding="utf-8",
+    handlers=[logging.FileHandler(filename="./logs.log", encoding="utf-8", mode="a+")],
     level=logging.INFO,
     format="%(levelname)s - %(asctime)s - %(message)s",
 )
@@ -39,6 +39,17 @@ def get_updated_feed(top_id: str) -> str:
                 # Displays the updated entries in feed
                 print(item.title)
                 print(item.link)
+                media_keywords: List[str] = item.media_keywords.strip(" ").split(", ")
+                # Append data to file
+                with open("feed.tsv", "a", newline="") as csvfile:
+                    spamwriter = csv.writer(
+                        csvfile,
+                        delimiter="\t",
+                        quotechar="|",
+                        quoting=csv.QUOTE_MINIMAL,
+                    )
+                    for keyword in media_keywords:
+                        spamwriter.writerow([keyword, item.link, item.author])
                 logging.info(
                     f"""{item.title} | {item.link} | {item.published} |
                      {item.summary} | {item.author}"""
@@ -64,9 +75,18 @@ def get_top_id() -> None:
 
 if __name__ == "__main__":
     # Get initial RSS feed from site
+    print("Script has started running...")
     parsed_data: Dict[str, Any] = feedparser.parse(URL)
     top_id: str = parsed_data.entries[0].id
-    schedule.every(10).minutes.do(get_top_id)
+    # Creating a TSV file for storing the updated data
+    with open("feed.tsv", "w", newline="") as csvfile:
+        spamwriter = csv.writer(
+            csvfile, delimiter="\t", quotechar="|", quoting=csv.QUOTE_MINIMAL
+        )
+        # Add heading to file
+        spamwriter.writerow(["Keyword"] + ["Article"] + ["Author"])
+    media_keywords = parsed_data.entries[0].media_keywords.strip(" ").split(", ")
+    schedule.every(2).seconds.do(get_top_id)
 
     while True:
         schedule.run_pending()
