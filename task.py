@@ -9,6 +9,9 @@ from typing import Any, Dict, List
 import feedparser
 import schedule
 
+import requests
+from bs4 import BeautifulSoup
+
 logging.basicConfig(
     handlers=[logging.FileHandler(filename="./logs.log", encoding="utf-8", mode="a+")],
     level=logging.INFO,
@@ -54,6 +57,17 @@ def get_updated_feed(top_id: str) -> str:
                     f"""{item.title} | {item.link} | {item.published} |
                      {item.summary} | {item.author}"""
                 )
+                # Getting the page
+                page : requests.models.Response = requests.get(item.link)
+                if page.status_code==200:
+                    # Converting the content to BeautifulSoup object
+                    page_content : BeautifulSoup = BeautifulSoup(page.content, "html.parser")
+                    # Extracting the required summary
+                    summary: str = page_content.find(
+                        class_="GridWrapper-vNBSO jMumET grid grid-margins grid-items-2 ArticlePageChunksGrid-kRgPDq DBpfE grid-layout--adrail narrow wide-adrail"
+                    ).text
+                    summary_content=summary.strip().split(".")
+                    print(summary_content[0]+". "+summary_content[1]+"\n")
             else:
                 break
         # Returns the id of top most item in feed
@@ -76,8 +90,7 @@ def get_top_id() -> None:
 if __name__ == "__main__":
     # Get initial RSS feed from site
     print("Script has started running...")
-    parsed_data: Dict[str, Any] = feedparser.parse(URL)
-    top_id: str = parsed_data.entries[0].id
+    top_id: str = ""
     # Creating a TSV file for storing the updated data
     with open("feed.tsv", "w", newline="") as csvfile:
         spamwriter = csv.writer(
@@ -85,7 +98,6 @@ if __name__ == "__main__":
         )
         # Add heading to file
         spamwriter.writerow(["Keyword"] + ["Article"] + ["Author"])
-    media_keywords = parsed_data.entries[0].media_keywords.strip(" ").split(", ")
     schedule.every(10).minutes.do(get_top_id)
 
     while True:

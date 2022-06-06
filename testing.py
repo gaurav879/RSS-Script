@@ -1,6 +1,9 @@
 """
 Testing file for task.py
 """
+
+import requests
+from bs4 import BeautifulSoup
 import feedparser
 
 URL = "https://www.wired.com/feed/category/business/latest/rss"
@@ -19,3 +22,9 @@ def test_get_updated_feed():
     assert "published" in parsed_data.entries[0]
     assert "summary" in parsed_data.entries[0]
     assert "author" in parsed_data.entries[0]
+    page = requests.get(parsed_data.entries[0].link)
+    page_content = BeautifulSoup(page.content, "html.parser")
+    _title = page_content.find(
+        class_="BaseWrap-sc-TURhJ BaseText-fFzBQt ContentHeaderHed-kpvpFG eTiIvU bVPdwx kjQZOs"
+    ).text
+    assert parsed_data.entries[0].title == _title
